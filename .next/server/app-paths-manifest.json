@@ -1,6 +1,4 @@
 {
-  "/dashboard/dashboard-index/page": "app/dashboard/dashboard-index/page.js",
-  "/page": "app/page.js",
-  "/dashboard/add-property/page": "app/dashboard/add-property/page.js",
-  "/dashboard/message/page": "app/dashboard/message/page.js"
+  "/dashboard/properties-list/page": "app/dashboard/properties-list/page.js",
+  "/dashboard/add-property/page": "app/dashboard/add-property/page.js"
 }

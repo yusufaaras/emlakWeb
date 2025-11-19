@@ -1,23 +1,26 @@
 {
   "development": {
-    "username": "postgres",
-    "password": "yusuf123",
+    "username": "root",
+    "password": null,
     "database": "real_estate_db",
     "host": "127.0.0.1",
-    "dialect": "postgres"
+    "port": 3306,
+    "dialect": "mysql"
   },
   "test": {
-    "username": "postgres",
-    "password": "yusuf123",
-    "database": "real_estate_db_test",
+    "username": "root",
+    "password": null,
+    "database": "real_estate_test",
     "host": "127.0.0.1",
-    "dialect": "postgres"
+    "port": 3306,
+    "dialect": "mysql"
   },
   "production": {
-    "username": "postgres",
-    "password": "yusuf123",
-    "database": "real_estate_db_prod",
+    "username": "root",
+    "password": null,
+    "database": "real_estate_prod",
     "host": "127.0.0.1",
-    "dialect": "postgres"
+    "port": 3306,
+    "dialect": "mysql"
   }
 }

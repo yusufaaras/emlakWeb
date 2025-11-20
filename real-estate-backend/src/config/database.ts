@@ -1,7 +1,8 @@
 import { Sequelize } from "sequelize-typescript";
 import dotenv from "dotenv";
 import { User } from "../models/User";
-import { Property } from "../models/Property"; // ekledik
+import { Property } from "../models/Property";
+import { PropertyImage } from "../models/PropertyImage"; // <-- ekledik
 
 dotenv.config();
 
@@ -12,6 +13,6 @@ export const sequelize = new Sequelize({
   host: process.env.DB_HOST || "127.0.0.1",
   port: Number(process.env.DB_PORT) || 3306,
   dialect: "mysql",
-  models: [User, Property],
+  models: [User, Property, PropertyImage], 
   logging: false,
 });

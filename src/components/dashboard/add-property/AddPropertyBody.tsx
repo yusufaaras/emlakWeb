@@ -1,11 +1,9 @@
 "use client"
-import React, { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import DashboardHeaderTwo from "@/layouts/headers/dashboard/DashboardHeaderTwo";
 import { toast } from "react-toastify";
 import NiceSelect from "@/ui/NiceSelect";
-import Image from "next/image";
-import locationImage from "@/assets/images/dashboard/icon/icon_16.svg";
 
 type FormValues = {
   listingCode: string;
@@ -24,14 +22,13 @@ type FormValues = {
   neighborhood?: string;
   address?: string;
   location?: { lat?: number; lng?: number };
-  // konut-specific
   rooms?: string;
   brutArea?: string;
   netArea?: string;
   floor?: string;
   totalFloors?: string;
-  heatingTypes?: string[]; // multi
-  cephe?: string[]; // multi
+  heatingTypes?: string[];
+  cephe?: string[];
   binaYasi?: string;
   aidat?: string;
   tapuDurumu?: string;
@@ -43,7 +40,7 @@ type FormValues = {
 const apiBase = (process.env.NEXT_PUBLIC_API_URL || "/api").replace(/\/$/, "") + "/properties";
 
 const AddPropertyBody = () => {
-  const { register, handleSubmit, control, watch, setValue, reset } = useForm<FormValues>({
+  const { register, handleSubmit, watch, setValue, reset } = useForm<FormValues>({
     defaultValues: {
       saleType: "satilik",
       propertyType: "konut",
@@ -52,64 +49,109 @@ const AddPropertyBody = () => {
     },
   });
 
+  const [mainPhoto, setMainPhoto] = useState<File | null>(null);
+  const [detailPhotos, setDetailPhotos] = useState<File[]>([]);
+  const [mainPreview, setMainPreview] = useState<string | null>(null);
+  const [detailPreviews, setDetailPreviews] = useState<string[]>([]);
+
   const propertyType = watch("propertyType");
   const saleType = watch("saleType");
 
   useEffect(() => {
-    // örnek olarak lokasyon otomatik doldurma fonksiyonu eklenebilir
-  }, []);
+    if (mainPhoto) {
+      const url = URL.createObjectURL(mainPhoto);
+      setMainPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setMainPreview(null);
+    }
+  }, [mainPhoto]);
+
+  useEffect(() => {
+    const urls = detailPhotos.map((f) => URL.createObjectURL(f));
+    setDetailPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [detailPhotos]);
+
+  const onMainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    setMainPhoto(f);
+  };
+
+  const onDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length > 10) {
+      toast.error("Detay fotoğrafı en fazla 10 olabilir");
+      setDetailPhotos(files.slice(0, 10));
+    } else {
+      setDetailPhotos(files);
+    }
+  };
 
   const onSubmit = async (data: FormValues) => {
     try {
-      // Oluşturulacak payload: backend model ile uyumlu
-      const payload: any = {
-        listingCode: data.listingCode,
-        branchId: data.branchId || null,
-        category: data.category || null,
-        city: data.city || null,
-        province: data.province || null,
-        district: data.district || null,
-        neighborhood: data.neighborhood || null,
-        address: data.address || null,
-        location: data.location || null,
-        saleType: data.saleType,
-        propertyType: data.propertyType,
-        subType: data.subType || null,
-        price: data.price ? Number(data.price) : null,
-        rentPrice: data.rentPrice ? Number(data.rentPrice) : null,
-        attributes: {
-          // ortak ve konut özel alanları attributes içinde saklıyoruz
-          title: data.title,
-          description: data.description,
-          rooms: data.rooms,
-          brutArea: data.brutArea,
-          netArea: data.netArea,
-          floor: data.floor,
-          totalFloors: data.totalFloors,
-          heatingTypes: data.heatingTypes || [],
-          cephe: data.cephe || [],
-          binaYasi: data.binaYasi,
-          aidat: data.aidat,
-          tapuDurumu: data.tapuDurumu,
-          iskan: data.iskan,
-          kullanmaDurumu: data.kullanmaDurumu,
-          // ek alanlar isteğe göre eklenir
-        },
-      };
+      // FormData approach for files + fields
+      const formData = new FormData();
 
+      // basic fields
+      formData.append("listingCode", data.listingCode || "");
+      formData.append("branchId", (data.branchId as any) ?? "");
+      formData.append("category", data.category ?? "");
+      formData.append("city", data.city ?? "");
+      formData.append("province", data.province ?? "");
+      formData.append("district", data.district ?? "");
+      formData.append("neighborhood", data.neighborhood ?? "");
+      formData.append("address", data.address ?? "");
+      formData.append("saleType", data.saleType ?? "satilik");
+      formData.append("propertyType", data.propertyType ?? "konut");
+      formData.append("subType", data.subType ?? "");
+      formData.append("price", data.price ?? "");
+      formData.append("rentPrice", data.rentPrice ?? "");
+
+      // attributes (title, description, konut fields) -> put as JSON string
+      const attributes = {
+        title: data.title,
+        description: data.description,
+        rooms: data.rooms,
+        brutArea: data.brutArea,
+        netArea: data.netArea,
+        floor: data.floor,
+        totalFloors: data.totalFloors,
+        heatingTypes: data.heatingTypes || [],
+        cephe: data.cephe || [],
+        binaYasi: data.binaYasi,
+        aidat: data.aidat,
+        tapuDurumu: data.tapuDurumu,
+        iskan: data.iskan,
+        kullanmaDurumu: data.kullanmaDurumu,
+        ...(data.attributes || {}),
+      };
+      formData.append("attributes", JSON.stringify(attributes));
+
+      // location if provided
+      if (data.location && (data.location.lat !== undefined || data.location.lng !== undefined)) {
+        formData.append("location", JSON.stringify(data.location));
+      }
+
+      // files
+      if (mainPhoto) {
+        formData.append("mainPhoto", mainPhoto);
+      }
+      detailPhotos.slice(0, 10).forEach((f) => formData.append("detailPhotos", f));
+
+      // send request (do NOT set Content-Type; browser sets multipart boundary)
       const res = await fetch(apiBase, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Authorization: 'Bearer TOKEN' -> eğer auth varsa ekle
-        },
-        body: JSON.stringify(payload),
+        // headers: { Authorization: 'Bearer TOKEN' } // add auth if needed
+        body: formData,
       });
 
       if (res.ok) {
         const json = await res.json();
         toast.success("İlan başarıyla kaydedildi");
         reset();
+        setMainPhoto(null);
+        setDetailPhotos([]);
         console.log("created property:", json);
       } else {
         const errText = await res.text();
@@ -122,7 +164,6 @@ const AddPropertyBody = () => {
     }
   };
 
-  // helper: checkbox multi select toggle
   const toggleArrayValue = (arr: string[] | undefined, value: string) => {
     if (!arr) return [value];
     return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
@@ -230,7 +271,6 @@ const AddPropertyBody = () => {
               )}
             </div>
 
-            {/* KONUT spesifik alanlar */}
             {propertyType === "konut" && (
               <>
                 <h5 className="mt-20">Konut Bilgileri</h5>
@@ -383,9 +423,39 @@ const AddPropertyBody = () => {
             </div>
           </div>
 
+          <div className="bg-white card-box border-20 mt-40">
+            <h4 className="dash-title-three">Photos</h4>
+
+            <div className="dash-input-wrapper mb-30">
+              <label>Ana Fotoğraf (1 adet)</label>
+              <input type="file" accept="image/*" onChange={onMainChange} />
+              {mainPreview && <img src={mainPreview} alt="main preview" style={{ width: 150, marginTop: 8 }} />}
+            </div>
+
+            <div className="dash-input-wrapper mb-30">
+              <label>Detay Fotoğrafları (En fazla 10)</label>
+              <input type="file" accept="image/*" multiple onChange={onDetailChange} />
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                {detailPreviews.map((p, idx) => (
+                  <img key={idx} src={p} alt={`detail-${idx}`} style={{ width: 100 }} />
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="button-group d-inline-flex align-items-center mt-30">
             <button type="submit" className="dash-btn-two tran3s me-3">Submit Property</button>
-            <button type="button" onClick={() => reset()} className="dash-cancel-btn tran3s">Cancel</button>
+            <button
+              type="button"
+              onClick={() => {
+                reset();
+                setMainPhoto(null);
+                setDetailPhotos([]);
+              }}
+              className="dash-cancel-btn tran3s"
+            >
+              Cancel
+            </button>
           </div>
         </form>
       </div>
